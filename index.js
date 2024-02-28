@@ -46,6 +46,7 @@ greetingsButtonStyles.innerHTML = `
 
 .greetingsMessageTM__icon {
   margin-left: -8px;
+  margin-right: 4px;
   width: 48px;
   height: 48px;
 }
