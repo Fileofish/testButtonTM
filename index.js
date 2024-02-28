@@ -83,6 +83,7 @@ button.greetingsButtonTM:active {
 }
 
 button.greetingsButtonTM > .greetingsButtonTM__icon {
+  margin-left: -8px;
   width: 28px;
   height: 28px;
   transition: all 0.15s linear;
