@@ -213,7 +213,4 @@ closeButton.addEventListener('click', () => {
 head.append(greetingsButtonStyles);
 greetingsButtonWrapper.append(closeButton);
 greetingsButtonWrapper.append(greetingsButton);
-
-setTimeout(() => {
-  body.prepend(greetingsButtonWrapper);
-}, 2500);
+body.prepend(greetingsButtonWrapper);
