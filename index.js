@@ -38,6 +38,93 @@ class ElementDistributor {
   }
 }
 
+class DataService {
+  static endpoint = 'https://bot-prod.asi.daturum.ru';
+  static token =
+    '2PACX-1vTfru8s6kNVcwQkzgYEY_DulK_bnILfQ_qEZNuzmujUwFDg4_MmWm0l1tef7Q1eoPGShvVhmAlCnTYE';
+  static async getData() {
+    try {
+      const response = await fetch(
+        `${this.endpoint}/googlesheetreader.json?json_action=read_public&id=${this.token}&variants=h50`
+      );
+      if (!response.ok) {
+        console.error('Network response was not ok');
+        return null;
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(
+        'There has been a problem with your fetch operation:',
+        error
+      );
+    }
+  }
+
+  static async convertData(data) {
+    const convertedData = {};
+    data.forEach((dataElem) => {
+      if (dataElem.name.includes('mock_ravnovesie:')) {
+        convertedData.name = dataElem.name.replace('mock_ravnovesie:', '');
+        dataElem.table.forEach((deepElem) => {
+          switch (true) {
+            case deepElem[0] === 'choice':
+              deepElem.shift();
+              const choices = [];
+              deepElem.forEach((choice, index) => {
+                DataService.convertElements(choice, index, choices);
+              });
+              convertedData['choices'] = choices;
+              break;
+            case deepElem[0] === 'choice_content':
+              deepElem.shift();
+              const choiceContent = [];
+              deepElem.forEach((content, index) => {
+                const currentChoiceContent = [];
+                DataService.convertElements(content, index + 1, currentChoiceContent);
+                choiceContent.push(currentChoiceContent);
+              });
+              convertedData['choiceContent'] = choiceContent;
+              break;
+            default:
+              if (deepElem[0] && deepElem[1]) {
+                convertedData[deepElem[0]] = deepElem[1];
+              }
+          }
+        });
+      }
+    });
+
+    if (Object.keys(convertedData).length) {
+      console.log(convertedData);
+      return convertedData;
+    }
+  }
+
+  static convertElements(string, index, array) {
+    const elemsArray = string.split(']');
+    elemsArray.forEach((elem, i) => {
+      switch (true) {
+        case elem.includes('[button:'):
+          array.push({
+            tag: 'button',
+            text: elem.replace('[button:', ''),
+          });
+          break;
+        case elem.includes('[to:'):
+          array[index]['action'] = elem.replace('[to:', '');
+          break;
+        case elem.includes('[text:'):
+          array.push({
+            tag: 'text',
+            text: elem.replace('[text:', '').replace(/<br>/g, '\n'),
+          });
+          break;
+      }
+    });
+  }
+}
+
 const dialogParameters = {
   buttonIcon: `<svg xmlns="http://www.w3.org/2000/svg" class="greetingsButtonTM__icon" width="1em" height="1em" viewBox="0 0 24 24"><path fill="#ed1c24" d="M23 17c0 3.31-2.69 6-6 6v-1.5c2.5 0 4.5-2 4.5-4.5zM1 7c0-3.31 2.69-6 6-6v1.5c-2.5 0-4.5 2-4.5 4.5zm7-2.68l-4.59 4.6c-3.22 3.22-3.22 8.45 0 11.67s8.45 3.22 11.67 0l7.07-7.09c.49-.47.49-1.26 0-1.75a1.25 1.25 0 0 0-1.77 0l-4.42 4.42l-.71-.71l6.54-6.54c.49-.49.49-1.28 0-1.77s-1.29-.49-1.79 0L14.19 13l-.69-.73l6.87-6.89c.49-.49.49-1.28 0-1.77s-1.28-.49-1.77 0l-6.89 6.89l-.71-.7l5.5-5.48c.5-.49.5-1.28 0-1.77s-1.28-.49-1.77 0l-7.62 7.62a4.003 4.003 0 0 1-.33 5.28l-.71-.71a3 3 0 0 0 0-4.24l-.35-.35l4.07-4.07c.49-.49.49-1.28 0-1.77c-.5-.48-1.29-.48-1.79.01"/></svg>`,
   closeButton: `<svg xmlns="http://www.w3.org/2000/svg" class="greetingsButtonTM__closeButton__icon" width="1em" height="1em" viewBox="0 0 24 24"><path fill="#5a5a5a" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"/></svg>`,
@@ -233,8 +320,8 @@ button.greetingsButtonTM__closeButton:hover {
 
 .greetingsButtonTM__closeButton__icon {
   margin: auto;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 @keyframes greetingsButtonTM__wrapper-disable {
@@ -266,7 +353,9 @@ button.greetingsButtonTM__closeButton:hover {
 }
 
 class App {
-  static init() {
+  static async init() {
+    const data = await DataService.getData();
+    const convertedData = DataService.convertData(data);
     StylesCreator.init();
     const dialogWrapper = ElementFactory.createElement(
       'div',
